@@ -191,8 +191,8 @@ class KSVideo(object):
         kuaishou_logger.info('cookie更新完毕！')
         await asyncio.sleep(2)  # 这里延迟是为了方便眼睛直观的观看
         # 关闭浏览器上下文和浏览器实例
-        await context.close()
-        await browser.close()
+        # await context.close()
+        # await browser.close()
 
     async def main(self):
         async with async_playwright() as playwright:
