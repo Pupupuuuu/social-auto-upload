@@ -1,8 +1,11 @@
 import logging
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+
+from api_main import upload_to_bilibili
 
 # 配置 FastAPI 应用，设置标题和描述
 app = FastAPI(title="Video Upload API", description="API to trigger platform-specific video upload scripts")
@@ -151,6 +154,15 @@ async def trigger_upload(platform: str | None = None):
         case _:
             # 如果 platform 值无效，抛出 400 异常
             raise HTTPException(status_code=400, detail=f"Invalid platform: {platform}. Valid options: bilibili, douyin, kuaishou, tencent, xhs")
+
+
+@app.post("/test", summary="Trigger platform-specific script to upload videos")
+async def test_upload():
+    """测试方法"""
+    with ThreadPoolExecutor() as executor:
+        result = executor.submit(upload_to_bilibili).result()
+    return {"message": result}
+
 
 
 # 如果脚本作为主程序运行
