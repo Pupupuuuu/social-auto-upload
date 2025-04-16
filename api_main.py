@@ -1,21 +1,22 @@
 # 导入 Python 标准库
-import time
 import asyncio
-from pathlib import Path
 import configparser
+import time
+from pathlib import Path
 
-# 导入每个平台的上传工具
-from uploader.bilibili_uploader.main import read_cookie_json_file, extract_keys_from_json, random_emoji, BilibiliUploader
 from xhs import XhsClient
-from uploader.xhs_uploader.main import sign_local, beauty_print
-from uploader.tencent_uploader.main import weixin_setup, TencentVideo
-from uploader.douyin_uploader.main import douyin_setup, DouYinVideo
-from uploader.ks_uploader.main import ks_setup, KSVideo
 
 # 导入工具函数和配置
 from conf import BASE_DIR
+# 导入每个平台的上传工具
+from uploader.bilibili_uploader.main import read_cookie_json_file, extract_keys_from_json, random_emoji, BilibiliUploader
+from uploader.douyin_uploader.main import douyin_setup, DouYinVideo
+from uploader.ks_uploader.main import ks_setup, KSVideo
+from uploader.tencent_uploader.main import weixin_setup, TencentVideo
+from uploader.xhs_uploader.main import sign_local, beauty_print
 from utils.constant import VideoZoneTypes, TencentZoneTypes
 from utils.files_times import generate_schedule_time_next_day, get_title_and_hashtags
+
 config = configparser.RawConfigParser()
 config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
 
@@ -23,10 +24,7 @@ config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
 # ==========================
 # 逻辑块：Bilibili 上传
 # ==========================
-# 函数：上传视频到 Bilibili
-# 直接复制 upload_video_to_bilibili.py 的逻辑，未做任何修改
-def upload_to_bilibili():
-    filepath = Path(BASE_DIR) / "videos"
+def upload_to_bilibili(file, title, tags):
     # how to get cookie, see the file of get_bilibili_cookie.py.
     account_file = Path(BASE_DIR / "cookies" / "bilibili_uploader" / "account.json")
     if not account_file.exists():
@@ -36,29 +34,26 @@ def upload_to_bilibili():
     cookie_data = extract_keys_from_json(cookie_data)
 
     tid = VideoZoneTypes.SPORTS_FOOTBALL.value  # 设置分区id
-    # 获取视频目录
-    folder_path = Path(filepath)
-    # 获取文件夹中的所有文件
-    files = list(folder_path.glob("*.mp4"))
-    file_num = len(files)
-    timestamps = generate_schedule_time_next_day(file_num, 1, daily_times=[16], timestamps=True)
 
-    for index, file in enumerate(files):
-        title, tags = get_title_and_hashtags(str(file))
-        # just avoid error, bilibili don't allow same title of video.
-        title += random_emoji()
-        tags_str = ','.join([tag for tag in tags])
-        # 打印视频文件名、标题和 hashtag
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
-        # I set desc same as title, do what u like.
-        desc = title
-        bili_uploader = BilibiliUploader(cookie_data, file, title, desc, tid, tags, timestamps[index])
-        bili_uploader.upload()
+    # just avoid error, bilibili don't allow same title of video.
+    title += random_emoji()
 
-        # life is beautiful don't so rush. be kind be patience
-        time.sleep(30)
+    # 打印视频文件名、标题和 hashtag
+    # 视频文件名：C:\Users\Missi\Framework\social - auto - upload - main\videos\demo.mp4
+    # 标题：这位勇敢的男子为了心爱之人每天坚守 🥺❤️‍🩹🍋
+    # Hashtag：['坚持不懈', '爱情执着', '奋斗使者', '短视频']
+    print(f"视频文件名：{file}")
+    print(f"标题：{title}")
+    print(f"Hashtag：{tags}")
+
+    # I set desc same as title, do what u like.
+    desc = title
+
+    bili_uploader = BilibiliUploader(cookie_data, file, title, desc, tid, tags, None)
+    bili_uploader.upload()
+
+    # life is beautiful don't so rush. be kind be patience
+    time.sleep(30)
 
 
 # ==========================
@@ -66,7 +61,6 @@ def upload_to_bilibili():
 # ==========================
 # 函数：上传视频到 XHS
 # 直接复制 upload_video_to_xhs.py 的逻辑，未做任何修改
-# 注意：原脚本使用未定义的 config，可能需修正为读取 accounts.ini
 def upload_to_xhs():
     filepath = Path(BASE_DIR) / "videos"
     # 获取视频目录
@@ -75,15 +69,11 @@ def upload_to_xhs():
     files = list(folder_path.glob("*.mp4"))
     file_num = len(files)
 
-    # 原脚本直接使用 config，未定义
-    # 假设环境中已定义 config，保留原逻辑
-    # 如果出错，可改为：
-    # config = configparser.RawConfigParser()
-    # config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
+    config = configparser.RawConfigParser()
+    config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
     cookies = config.get('account1', 'cookies')
     xhs_client = XhsClient(cookies, sign=sign_local, timeout=60)
-    # auth cookie
-    # 注意：该校验cookie方式可能并没那么准确
+
     try:
         xhs_client.get_video_first_frame_image_id("3214")
     except:
