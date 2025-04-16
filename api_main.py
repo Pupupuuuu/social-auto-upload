@@ -15,7 +15,6 @@ from uploader.ks_uploader.main import ks_setup, KSVideo
 from uploader.tencent_uploader.main import weixin_setup, TencentVideo
 from uploader.xhs_uploader.main import sign_local, beauty_print
 from utils.constant import VideoZoneTypes, TencentZoneTypes
-from utils.files_times import generate_schedule_time_next_day, get_title_and_hashtags
 
 config = configparser.RawConfigParser()
 config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
@@ -59,8 +58,6 @@ def upload_to_bilibili(file, title, tags):
 # ==========================
 # 逻辑块：XHS（小红书）上传
 # ==========================
-# 函数：上传视频到 XHS
-# 直接复制 upload_video_to_xhs.py 的逻辑，未做任何修改
 def upload_to_xhs(file, title, tags):
     config = configparser.RawConfigParser()
     config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
@@ -111,57 +108,46 @@ def upload_to_xhs(file, title, tags):
 # ==========================
 # 逻辑块：Tencent 上传
 # ==========================
-# 函数：上传视频到 Tencent
-# 直接复制 upload_video_to_tencent.py 的逻辑，未做任何修改
-def upload_to_tencent():
-    filepath = Path(BASE_DIR) / "videos"
+def upload_to_tencent(file, title, tags):
+    # 获取 cookie 文件
     account_file = Path(BASE_DIR / "cookies" / "tencent_uploader" / "account.json")
-    # 获取视频目录
-    folder_path = Path(filepath)
-    # 获取文件夹中的所有文件
-    files = list(folder_path.glob("*.mp4"))
-    file_num = len(files)
-    publish_datetimes = generate_schedule_time_next_day(file_num, 1, daily_times=[16])
-    cookie_setup = asyncio.run(weixin_setup(account_file, handle=True))
+
+    # 获取 cookie , 如果cookie失效那么就弹窗重新登陆
+    asyncio.run(weixin_setup(account_file, handle=True))
+
     category = TencentZoneTypes.LIFESTYLE.value  # 标记原创需要否则不需要传
-    for index, file in enumerate(files):
-        title, tags = get_title_and_hashtags(str(file))
-        # 打印视频文件名、标题和 hashtag
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
-        app = TencentVideo(title, file, tags, publish_datetimes[index], account_file, category)
-        asyncio.run(app.main(), debug=False)
+
+    # 打印视频文件名、标题和 hashtag
+    print(f"视频文件名：{file}")
+    print(f"标题：{title}")
+    print(f"Hashtag：{tags}")
+    app = TencentVideo(title, file, tags, 0, account_file, category)
+    asyncio.run(app.main(), debug=False)
 
 
 # ==========================
 # 逻辑块：Douyin 上传
 # ==========================
-# 函数：上传视频到 Douyin
-# 直接复制 upload_video_to_douyin.py 的逻辑，未做任何修改
-def upload_to_douyin():
-    filepath = Path(BASE_DIR) / "videos"
+def upload_to_douyin(file, title, tags):
+    # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "douyin_uploader" / "account.json")
-    # 获取视频目录
-    folder_path = Path(filepath)
-    # 获取文件夹中的所有文件
-    files = list(folder_path.glob("*.mp4"))
-    file_num = len(files)
-    publish_datetimes = generate_schedule_time_next_day(file_num, 1, daily_times=[16])
+    # 验证cookie
     cookie_setup = asyncio.run(douyin_setup(account_file, handle=False))
-    for index, file in enumerate(files):
-        title, tags = get_title_and_hashtags(str(file))
-        thumbnail_path = file.with_suffix('.png')
-        # 打印ビデ文件名、标题和 hashtag
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
-        # 暂时没有时间修复封面上传，故先隐藏掉该功能
-        # if thumbnail_path.exists():
-        # app = DouYinVideo(title, file, tags, publish_datetimes[index], account_file, thumbnail_path=thumbnail_path)
-        # else:
-        app = DouYinVideo(title, file, tags, publish_datetimes[index], account_file)
-        asyncio.run(app.main(), debug=False)
+
+    # 获取封面图
+    thumbnail_path = file.with_suffix('.png')
+
+    # 打印ビデ文件名、标题和 hashtag
+    print(f"视频文件名：{file}")
+    print(f"标题：{title}")
+    print(f"Hashtag：{tags}")
+
+    # 暂时没有时间修复封面上传，故先隐藏掉该功能
+    # if thumbnail_path.exists():
+    # app = DouYinVideo(title, file, tags, publish_datetimes[index], account_file, thumbnail_path=thumbnail_path)
+    # else:
+    app = DouYinVideo(title, file, tags, 0, account_file)
+    asyncio.run(app.main(), debug=False)
 
 
 # ==========================
@@ -169,24 +155,19 @@ def upload_to_douyin():
 # ==========================
 # 函数：上传视频到 Kuaishou
 # 直接复制 upload_video_to_kuaishou.py 的逻辑，未做任何修改
-def upload_to_kuaishou():
-    filepath = Path(BASE_DIR) / "videos"
+def upload_to_kuaishou(file, title, tags):
+    # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "ks_uploader" / "account.json")
-    # 获取视频目录
-    folder_path = Path(filepath)
-    # 获取文件夹中的所有文件
-    files = list(folder_path.glob("*.mp4"))
-    file_num = len(files)
-    publish_datetimes = generate_schedule_time_next_day(file_num, 1, daily_times=[16])
+    # 验证cookie
     cookie_setup = asyncio.run(ks_setup(account_file, handle=False))
-    for index, file in enumerate(files):
-        title, tags = get_title_and_hashtags(str(file))
-        # 打印视频文件名、标题和 hashtag
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
-        app = KSVideo(title, file, tags, publish_datetimes[index], account_file)
-        asyncio.run(app.main(), debug=False)
+
+    # 打印视频文件名、标题和 hashtag
+    print(f"视频文件名：{file}")
+    print(f"标题：{title}")
+    print(f"Hashtag：{tags}")
+
+    app = KSVideo(title, file, tags, 0, account_file)
+    asyncio.run(app.main(), debug=False)
 
 
 # ==========================
@@ -204,20 +185,20 @@ if __name__ == '__main__':
     # upload_to_bilibili(file=file, title=title, tags=tags)
 
     # 调用 XHS 上传
-    print("\n=== XHS ===")
-    upload_to_xhs(file=file, title=title, tags=tags)
+    # print("\n=== XHS ===")
+    # upload_to_xhs(file=file, title=title, tags=tags)
 
     # # 调用 Tencent 上传
-    # print("\n=== Tencent ===")
-    # upload_to_tencent()
+    print("\n=== Tencent ===")
+    upload_to_tencent(file=file, title=title, tags=tags)
     #
     # # 调用 Douyin 上传
     # print("\n=== Douyin ===")
-    # upload_to_douyin()
+    # upload_to_douyin(file=file, title=title, tags=tags)
     #
     # # 调用 Kuaishou 上传
     # print("\n=== Kuaishou ===")
-    # upload_to_kuaishou()
+    # upload_to_kuaishou(file=file, title=title, tags=tags)
 
     # 所有上传完成
     print("\n=== 所有平台上传完成！ ===")
