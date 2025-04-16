@@ -61,14 +61,7 @@ def upload_to_bilibili(file, title, tags):
 # ==========================
 # 函数：上传视频到 XHS
 # 直接复制 upload_video_to_xhs.py 的逻辑，未做任何修改
-def upload_to_xhs():
-    filepath = Path(BASE_DIR) / "videos"
-    # 获取视频目录
-    folder_path = Path(filepath)
-    # 获取文件夹中的所有文件
-    files = list(folder_path.glob("*.mp4"))
-    file_num = len(files)
-
+def upload_to_xhs(file, title, tags):
     config = configparser.RawConfigParser()
     config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
     cookies = config.get('account1', 'cookies')
@@ -80,42 +73,36 @@ def upload_to_xhs():
         print("cookie 失效")
         return  # 退出函数，相当于原脚本的 exit()
 
-    publish_datetimes = generate_schedule_time_next_day(file_num, 1, daily_times=[16])
+    # 加入到标题 补充标题（xhs 可以填1000字不写白不写）
+    tags_str = ' '.join(['#' + tag for tag in tags])
+    hash_tags = []
 
-    for index, file in enumerate(files):
-        title, tags = get_title_and_hashtags(str(file))
-        # 加入到标题 补充标题（xhs 可以填1000字不写白不写）
-        tags_str = ' '.join(['#' + tag for tag in tags])
-        hash_tags_str = ''
-        hash_tags = []
+    # 打印视频文件名、标题和 hashtag
+    print(f"视频文件名：{file}")
+    print(f"标题：{title}")
+    print(f"Hashtag：{tags}")
 
-        # 打印视频文件名、标题和 hashtag
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
+    topics = []
+    # 获取hashtag
+    for i in tags[:3]:
+        topic_official = xhs_client.get_suggest_topic(i)
+        if topic_official:
+            topic_official[0]['type'] = 'topic'
+            topic_one = topic_official[0]
+            hash_tag_name = topic_one['name']
+            hash_tags.append(hash_tag_name)
+            topics.append(topic_one)
 
-        topics = []
-        # 获取hashtag
-        for i in tags[:3]:
-            topic_official = xhs_client.get_suggest_topic(i)
-            if topic_official:
-                topic_official[0]['type'] = 'topic'
-                topic_one = topic_official[0]
-                hash_tag_name = topic_one['name']
-                hash_tags.append(hash_tag_name)
-                topics.append(topic_one)
+    hash_tags_str = ' ' + ' '.join(['#' + tag + '[话题]#' for tag in hash_tags])
+    note = xhs_client.create_video_note(title=title[:20], video_path=str(file),
+                                        desc=title + tags_str + hash_tags_str,
+                                        topics=topics,
+                                        is_private=False,
+                                        post_time=None)
 
-        hash_tags_str = ' ' + ' '.join(['#' + tag + '[话题]#' for tag in hash_tags])
-
-        note = xhs_client.create_video_note(title=title[:20], video_path=str(file),
-                                            desc=title + tags_str + hash_tags_str,
-                                            topics=topics,
-                                            is_private=False,
-                                            post_time=publish_datetimes[index].strftime("%Y-%m-%d %H:%M:%S"))
-
-        beauty_print(note)
-        # 强制休眠30s，避免风控（必要）
-        time.sleep(30)
+    beauty_print(note)
+    # 强制休眠30s，避免风控（必要）
+    time.sleep(30)
 
 
 # ==========================
@@ -206,25 +193,29 @@ def upload_to_kuaishou():
 if __name__ == '__main__':
     print("=== 开始一键上传到所有平台 ===")
 
+    file = Path(r"C:\Users\Missi\Framework\social-auto-upload-main\videos\demo.mp4")
+    title = "这位勇敢的男子为了心爱之人每天坚守 🥺❤️‍🩹🍋"
+    tags = ['坚持不懈', '爱情执着', '奋斗使者', '短视频']
+
     # 调用 Bilibili 上传
     print("\n=== Bilibili ===")
-    upload_to_bilibili()
+    upload_to_bilibili(file=file, title=title, tags=tags)
 
     # 调用 XHS 上传
-    print("\n=== XHS ===")
-    upload_to_xhs()
-
-    # 调用 Tencent 上传
-    print("\n=== Tencent ===")
-    upload_to_tencent()
-
-    # 调用 Douyin 上传
-    print("\n=== Douyin ===")
-    upload_to_douyin()
-
-    # 调用 Kuaishou 上传
-    print("\n=== Kuaishou ===")
-    upload_to_kuaishou()
+    # print("\n=== XHS ===")
+    # upload_to_xhs()
+    #
+    # # 调用 Tencent 上传
+    # print("\n=== Tencent ===")
+    # upload_to_tencent()
+    #
+    # # 调用 Douyin 上传
+    # print("\n=== Douyin ===")
+    # upload_to_douyin()
+    #
+    # # 调用 Kuaishou 上传
+    # print("\n=== Kuaishou ===")
+    # upload_to_kuaishou()
 
     # 所有上传完成
     print("\n=== 所有平台上传完成！ ===")
