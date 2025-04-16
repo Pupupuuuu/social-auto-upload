@@ -78,6 +78,9 @@ def upload_to_xhs(file, title, tags):
     hash_tags = []
 
     # 打印视频文件名、标题和 hashtag
+    # 视频文件名：C:\Users\Missi\Framework\social - auto - upload - main\videos\demo.mp4
+    # 标题：这位勇敢的男子为了心爱之人每天坚守 🥺❤️‍🩹
+    # Hashtag：['坚持不懈', '爱情执着', '奋斗使者', '短视频']
     print(f"视频文件名：{file}")
     print(f"标题：{title}")
     print(f"Hashtag：{tags}")
@@ -192,19 +195,18 @@ def upload_to_kuaishou():
 # 这是程序的起点，按顺序调用五个平台的上传函数
 if __name__ == '__main__':
     print("=== 开始一键上传到所有平台 ===")
-
     file = Path(r"C:\Users\Missi\Framework\social-auto-upload-main\videos\demo.mp4")
     title = "这位勇敢的男子为了心爱之人每天坚守 🥺❤️‍🩹🍋"
     tags = ['坚持不懈', '爱情执着', '奋斗使者', '短视频']
 
     # 调用 Bilibili 上传
-    print("\n=== Bilibili ===")
-    upload_to_bilibili(file=file, title=title, tags=tags)
+    # print("\n=== Bilibili ===")
+    # upload_to_bilibili(file=file, title=title, tags=tags)
 
     # 调用 XHS 上传
-    # print("\n=== XHS ===")
-    # upload_to_xhs()
-    #
+    print("\n=== XHS ===")
+    upload_to_xhs(file=file, title=title, tags=tags)
+
     # # 调用 Tencent 上传
     # print("\n=== Tencent ===")
     # upload_to_tencent()
