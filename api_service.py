@@ -30,7 +30,7 @@ PYTHON_EXEC = BASE_DIR / ".venv" / "Scripts" / "python.exe"
 async def upload_video(script_path: Path):
     """
     执行指定的上传脚本，上传视频到对应的平台。
-    返回执行过程中的日志。
+    实时打印日志到控制台，并返回执行过程中的日志。
     """
     try:
         # 检查脚本文件是否存在
@@ -45,39 +45,62 @@ async def upload_video(script_path: Path):
         # 记录调试信息，显示正在运行的脚本路径
         logger.info(f"[DEBUG] 运行脚本：{script_path}")
 
-        # 使用虚拟环境的 Python 执行脚本
-        try:
-            result = subprocess.run(
-                [str(PYTHON_EXEC), str(script_path)],  # 命令行参数：Python 可执行文件和脚本路径
-                capture_output=True,  # 捕获标准输出和标准错误
-                text=True,  # 以文本模式返回输出
-                encoding="utf-8",  # 强制使用 UTF-8 编码
-                check=True  # 如果脚本返回非零退出码，抛出异常
-            )
-        except UnicodeDecodeError:
-            # 添加解码错误信息到日志
-            logs.append("[ERROR] 输出解码失败，可能含特殊字符")
-            raise HTTPException(status_code=500, detail="输出解码失败，可能含特殊字符")
+        # 使用 Popen 运行脚本，实时捕获输出
+        process = subprocess.Popen(
+            [str(PYTHON_EXEC), str(script_path)],  # 命令行参数：Python 可执行文件和脚本路径
+            stdout=subprocess.PIPE,  # 捕获标准输出
+            stderr=subprocess.PIPE,  # 捕获标准错误
+            text=True,  # 以文本模式返回输出
+            encoding="utf-8",  # 强制使用 UTF-8 编码
+            errors="replace"  # 解码失败时替换特殊字符，防止 UnicodeDecodeError
+        )
 
-        # 解析脚本的标准输出，按行分割
-        stdout = result.stdout.splitlines() if result.stdout else []
-        # 解析脚本的标准错误，按行分割
-        stderr = result.stderr.splitlines() if result.stderr else []
+        # 初始化标准输出和标准错误的日志列表
+        stdout_logs = []
+        stderr_logs = []
+
+        # 实时读取标准输出
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                line = line.strip()
+                print(f"[STDOUT] {line}")  # 实时打印到控制台
+                stdout_logs.append(line)
+
+        # 实时读取标准错误
+        while True:
+            line = process.stderr.readline()
+            if not line and process.poll() is not None:
+                break
+            if line:
+                line = line.strip()
+                print(f"[STDERR] {line}")  # 实时打印到控制台
+                stderr_logs.append(line)
+
+        # 等待进程结束并获取退出码
+        return_code = process.wait()
 
         # 过滤掉以 "INFO:biliup:" 开头的日志行
-        filtered_logs = [line for line in stdout if not line.startswith("INFO:biliup:")]
+        filtered_logs = [line for line in stdout_logs if not line.startswith("INFO:biliup:")]
         # 将过滤后的日志添加到 logs 列表
         logs.extend(filtered_logs)
 
         # 如果存在标准错误输出
-        if stderr:
+        if stderr_logs:
             # 添加错误标题到日志
             logs.extend(["=== Errors ==="])
             # 添加错误日志到日志列表
-            logs.extend(stderr)
+            logs.extend(stderr_logs)
             # 记录错误日志
-            logger.error(f"脚本错误：{stderr}")
-            raise HTTPException(status_code=500, detail=f"上传失败，请检查日志：{stderr}")
+            logger.error(f"脚本错误：{stderr_logs}")
+            raise HTTPException(status_code=500, detail=f"上传失败，请检查日志：{stderr_logs}")
+
+        # 检查脚本是否成功执行
+        if return_code != 0:
+            logger.error(f"脚本执行失败，退出码：{return_code}")
+            raise HTTPException(status_code=500, detail=f"脚本执行失败，退出码：{return_code}")
 
         # 添加上传完成信息到日志
         logs.append("=== 上传完成！ ===")
@@ -87,11 +110,6 @@ async def upload_video(script_path: Path):
             "status": "success",
             "logs": logs
         }, 200
-    except subprocess.CalledProcessError as e:
-        # 记录脚本执行失败的错误信息
-        logger.error(f"脚本执行失败：{e.stderr}")
-        # 抛出 500 异常，包含错误详情
-        raise HTTPException(status_code=500, detail=f"脚本执行失败：{e.stderr}")
     except Exception as e:
         # 记录其他未预期的错误信息
         logger.error(f"上传失败：{str(e)}")
