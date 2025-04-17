@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
+import asyncio
+import os
 from datetime import datetime
 
 from playwright.async_api import Playwright, async_playwright
-import os
-import asyncio
 
 from conf import LOCAL_CHROME_PATH
 from utils.base_social_media import set_init_script
@@ -51,23 +51,43 @@ async def cookie_auth(account_file):
 
 async def get_tencent_cookie(account_file):
     async with async_playwright() as playwright:
+        # 启动浏览器
         options = {
-            'args': [
-                '--lang en-GB'
-            ],
-            'headless': False,  # Set headless option here
+            'args': ['--lang en-GB'],
+            'headless': False,
         }
-        # Make sure to run headed.
         browser = await playwright.chromium.launch(**options)
-        # Setup context however you like.
-        context = await browser.new_context()  # Pass any options
-        # Pause the page, and start recording manually.
+        context = await browser.new_context()
         context = await set_init_script(context)
         page = await context.new_page()
+
+        # 导航到微信视频号登录页面
+        tencent_logger.info("[+] 正在打开微信视频号登录页面...")
         await page.goto("https://channels.weixin.qq.com")
-        await page.pause()
-        # 点击调试器的继续，保存cookie
-        await context.storage_state(path=account_file)
+
+        # 等待用户扫码登录
+        tencent_logger.info("[+] 请扫码登录，等待登录完成...")
+        try:
+            # 等待页面跳转到登录后的页面
+            await page.wait_for_url("https://channels.weixin.qq.com/platform", timeout=60000)
+            tencent_logger.info("[+] 检测到登录成功，保存 cookie...")
+        except Exception as e:
+            tencent_logger.error(f"[+] 登录超时或失败: {e}")
+            return False
+
+        # 保存 cookie
+        try:
+            await context.storage_state(path=account_file)
+            tencent_logger.success("[+] Cookie 保存成功")
+            return True
+        except Exception as e:
+            tencent_logger.error(f"[+] Cookie 保存失败: {e}")
+            return False
+        finally:
+            # 关闭上下文和浏览器
+            await context.close()
+            await browser.close()
+            tencent_logger.info("[+] 浏览器已关闭")
 
 
 async def weixin_setup(account_file, handle=False):
