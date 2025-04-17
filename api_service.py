@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from api_main import upload_to_kuaishou, upload_to_bilibili, upload_to_xhs, upload_to_tencent, upload_to_douyin
 from conf import BASE_DIR
 from uploader.douyin_uploader.main import douyin_setup
+from uploader.ks_uploader.main import ks_setup
+from uploader.tencent_uploader.main import weixin_setup
 
 # 配置 FastAPI 应用，设置标题和描述
 app = FastAPI(title="自动化部署视频", description="通过API来自动化部署视频到各个平台。")
@@ -103,10 +105,39 @@ async def auth_douyin(handle: bool = False):
     return {"flag": flag}, 200
 
 
+@app.post("/auth/kuaishou", summary="验证快手的cookie是否有效。")
+async def auth_kuaishou(handle: bool = False):
+    """验证快手平台的cookie是否生效"""
+    account_file = Path(BASE_DIR / "cookies" / "ks_uploader" / "account.json")
+    account_file.parent.mkdir(exist_ok=True)
+    print(f"打印参数 handle : {handle}")
+    print(f"打印参数cookie")
+
+    flag = await ks_setup(str(account_file), handle=handle)
+    print(f"快手 cookie 是否生效: {flag}")
+
+    return {"flag": flag}, 200
+
+
+@app.post("/auth/tencent", summary="验证视频号的cookie是否有效。")
+async def auth_tencent(handle: bool = False):
+    """验证视频号平台的cookie是否生效"""
+    account_file = Path(BASE_DIR / "cookies" / "tencent_uploader" / "account.json")
+    account_file.parent.mkdir(exist_ok=True)
+    print(f"打印参数 handle : {handle}")
+
+    flag = await weixin_setup(str(account_file), handle=handle)
+    print(f"视频号 cookie 是否生效: {flag}")
+
+    return {"flag": flag}, 200
+
+
 # 如果脚本作为主程序运行
 if __name__ == "__main__":
     # 导入 uvicorn，用于运行 FastAPI 应用
     import uvicorn
+    # 导入uvicorn 用于隐形Fastapi
+    # 如果作为脚本为主程序运行.
 
     # 启动 FastAPI 应用，监听所有网络接口的 8000 端口
     uvicorn.run(app, host="0.0.0.0", port=8000)
