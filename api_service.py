@@ -21,6 +21,7 @@ class UploadRequest(BaseModel):
     title: str
     tags: List[str]
     headless: bool = True
+    location: str | None = None
 
 
 @app.post("/api/bilibili", summary="将视频部署到 B 站")
@@ -75,7 +76,8 @@ async def api_douyin(request: UploadRequest):
             file=Path(request.file_path),
             title=request.title,
             tags=request.tags,
-            headless=request.headless
+            headless=request.headless,
+            location=request.location
         ).result()
     return {"message": "视频已成功上传至抖音!"}
 

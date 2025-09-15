@@ -128,7 +128,7 @@ def upload_to_tencent(file, title, tags):
 # ==========================
 # 逻辑块：Douyin 上传
 # ==========================
-def upload_to_douyin(file, title, tags, headless: bool = False):
+def upload_to_douyin(file, title, tags, headless: bool = False, location: str | None = None):
     # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "douyin_uploader" / "account.json")
     # 验证cookie
@@ -146,7 +146,7 @@ def upload_to_douyin(file, title, tags, headless: bool = False):
     # if thumbnail_path.exists():
     # app = DouYinVideo(title, file, tags, publish_datetimes[index], account_file, thumbnail_path=thumbnail_path)
     # else:
-    app = DouYinVideo(title, file, tags, 0, account_file, headless=headless)
+    app = DouYinVideo(title, file, tags, 0, account_file, headless=headless, location=location)
     asyncio.run(app.main(), debug=False)
 
 

@@ -64,7 +64,7 @@ async def douyin_cookie_gen(account_file):
 
 
 class DouYinVideo(object):
-    def __init__(self, title, file_path, tags, publish_date: datetime, account_file, thumbnail_path=None, headless: bool = False):
+    def __init__(self, title, file_path, tags, publish_date: datetime, account_file, thumbnail_path=None, headless: bool = False, location: str | None = None):
         self.title = title  # 视频标题
         self.file_path = file_path
         self.tags = tags
@@ -74,6 +74,7 @@ class DouYinVideo(object):
         self.local_executable_path = LOCAL_CHROME_PATH
         self.thumbnail_path = thumbnail_path
         self.headless = headless
+        self.location = location
 
     async def set_schedule_time_douyin(self, page, publish_date):
         # 选择包含特定文本内容的 label 元素
@@ -181,7 +182,8 @@ class DouYinVideo(object):
         await self.set_thumbnail(page, self.thumbnail_path)
 
         # 更换可见元素
-        await self.set_location(page, "杭州市")
+        if self.location:
+            await self.set_location(page, self.location)
 
         # 頭條/西瓜
         third_part_element = '[class^="info"] > [class^="first-part"] div div.semi-switch'
