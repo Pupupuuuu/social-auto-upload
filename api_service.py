@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 
 from api_main import upload_to_kuaishou, upload_to_bilibili, upload_to_xhs, upload_to_tencent, upload_to_douyin
@@ -10,6 +10,7 @@ from conf import BASE_DIR
 from uploader.douyin_uploader.main import douyin_setup
 from uploader.ks_uploader.main import ks_setup
 from uploader.tencent_uploader.main import weixin_setup
+from myUtils.auth import cookie_auth_douyin, cookie_auth_tencent, cookie_auth_ks, cookie_auth_xhs
 
 # 配置 FastAPI 应用，设置标题和描述
 app = FastAPI(title="自动化部署视频", description="通过API来自动化部署视频到各个平台。")
@@ -135,6 +136,44 @@ async def auth_tencent(handle: bool = False):
     print(f"视频号 cookie 是否生效: {flag}")
 
     return {"flag": flag}
+
+
+@app.get("/checkCookie", summary="检查指定平台的Cookie是否有效")
+async def check_cookie_endpoint(platform: str = Query(..., description="平台名称 (douyin, kuaishou, tencent, xiaohongshu)")):
+    platform_name = platform.lower()
+
+    # Map platform name to path component
+    platform_info = {
+        "xiaohongshu": "xiaohongshu_uploader",
+        "tencent": "tencent_uploader",
+        "douyin": "douyin_uploader",
+        "kuaishou": "ks_uploader"
+    }
+
+    path_component = platform_info.get(platform_name)
+
+    if not path_component:
+        return {"code": 400, "msg": "Invalid platform name"}
+
+    # Construct the path based on the old structure
+    account_file_path = Path(BASE_DIR / "cookies" / path_component / "account.json")
+
+    if not account_file_path.exists():
+        return {"code": 404, "msg": f"Cookie file not found for platform {platform_name}"}
+
+    is_valid = False
+
+    # Call the appropriate auth function
+    if platform_name == "xiaohongshu":
+        is_valid = await cookie_auth_xhs(account_file_path)
+    elif platform_name == "tencent":
+        is_valid = await cookie_auth_tencent(account_file_path)
+    elif platform_name == "douyin":
+        is_valid = await cookie_auth_douyin(account_file_path)
+    elif platform_name == "kuaishou":
+        is_valid = await cookie_auth_ks(account_file_path)
+
+    return {"code": 200, "data": {"isValid": is_valid}}
 
 
 # 如果脚本作为主程序运行
