@@ -128,7 +128,7 @@ def upload_to_tencent(file, title, tags):
 # ==========================
 # 逻辑块：Douyin 上传
 # ==========================
-def upload_to_douyin(file, title, tags):
+def upload_to_douyin(file, title, tags, headless: bool = False):
     # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "douyin_uploader" / "account.json")
     # 验证cookie
@@ -146,7 +146,7 @@ def upload_to_douyin(file, title, tags):
     # if thumbnail_path.exists():
     # app = DouYinVideo(title, file, tags, publish_datetimes[index], account_file, thumbnail_path=thumbnail_path)
     # else:
-    app = DouYinVideo(title, file, tags, 0, account_file)
+    app = DouYinVideo(title, file, tags, 0, account_file, headless=headless)
     asyncio.run(app.main(), debug=False)
 
 
@@ -155,7 +155,7 @@ def upload_to_douyin(file, title, tags):
 # ==========================
 # 函数：上传视频到 Kuaishou
 # 直接复制 upload_video_to_kuaishou.py 的逻辑，未做任何修改
-def upload_to_kuaishou(file, title, tags):
+def upload_to_kuaishou(file, title, tags, headless: bool = False):
     # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "ks_uploader" / "account.json")
     # 验证cookie
@@ -166,7 +166,7 @@ def upload_to_kuaishou(file, title, tags):
     print(f"标题：{title}")
     print(f"Hashtag：{tags}")
 
-    app = KSVideo(title, file, tags, 0, account_file)
+    app = KSVideo(title, file, tags, 0, account_file, headless=headless)
     asyncio.run(app.main(), debug=False)
 
 

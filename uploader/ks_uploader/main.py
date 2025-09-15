@@ -62,7 +62,7 @@ async def get_ks_cookie(account_file):
 
 
 class KSVideo(object):
-    def __init__(self, title, file_path, tags, publish_date: datetime, account_file):
+    def __init__(self, title, file_path, tags, publish_date: datetime, account_file, headless: bool = False):
         self.title = title  # 视频标题
         self.file_path = file_path
         self.tags = tags
@@ -70,6 +70,7 @@ class KSVideo(object):
         self.account_file = account_file
         self.date_format = '%Y-%m-%d %H:%M'
         self.local_executable_path = LOCAL_CHROME_PATH
+        self.headless = headless
 
     async def handle_upload_error(self, page):
         kuaishou_logger.error("视频出错了，重新上传中")
@@ -80,12 +81,12 @@ class KSVideo(object):
         print(self.local_executable_path)
         if self.local_executable_path:
             browser = await playwright.chromium.launch(
-                headless=False,
+                headless=self.headless,
                 executable_path=self.local_executable_path,
             )
         else:
             browser = await playwright.chromium.launch(
-                headless=False
+                headless=self.headless
             )  # 创建一个浏览器上下文，使用指定的 cookie 文件
         context = await browser.new_context(storage_state=f"{self.account_file}")
         context = await set_init_script(context)

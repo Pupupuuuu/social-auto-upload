@@ -20,6 +20,7 @@ class UploadRequest(BaseModel):
     file_path: str
     title: str
     tags: List[str]
+    headless: bool = True
 
 
 @app.post("/api/bilibili", summary="将视频部署到 B 站")
@@ -73,7 +74,8 @@ async def api_douyin(request: UploadRequest):
             upload_to_douyin,
             file=Path(request.file_path),
             title=request.title,
-            tags=request.tags
+            tags=request.tags,
+            headless=request.headless
         ).result()
     return {"message": "视频已成功上传至抖音!"}
 
@@ -87,7 +89,8 @@ async def api_kuaishou(request: UploadRequest):
             upload_to_kuaishou,
             file=Path(request.file_path),
             title=request.title,
-            tags=request.tags
+            tags=request.tags,
+            headless=request.headless
         ).result()
     return {"message": "视频已成功上传至快手!"}
 
