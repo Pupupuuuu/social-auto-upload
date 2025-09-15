@@ -200,8 +200,8 @@ if __name__ == '__main__':
     # upload_to_tencent(file=file, title=title, tags=tags)
 
     # # 调用 Douyin 上传
-    # print("\n=== Douyin ===")
-    # upload_to_douyin(file=file, title=title, tags=tags)
+    print("\n=== Douyin ===")
+    upload_to_douyin(file=file, title=title, tags=tags)
 
     # # 调用 Kuaishou 上传
     # print("\n=== Kuaishou ===")

@@ -31,13 +31,6 @@ async def wait_for_login_success(page, initial_url, platform_name="平台", time
     login_keywords = ['login', 'signin', 'auth', 'passport', '登录', '登陆']
     start_time = asyncio.get_event_loop().time()
     
-    # 快手特殊处理：检查是否已经在登录状态
-    if platform_name == "快手" and "cp.kuaishou.com" in initial_url:
-        print(f"[{platform_name}] 检测到快手平台，进行特殊验证...")
-        # 等待用户手动确认登录
-        await asyncio.sleep(5)  # 给用户时间看到提示
-        print(f"[{platform_name}] 请确认您已在浏览器中完成登录，然后程序将验证登录状态...")
-    
     while True:
         current_time = asyncio.get_event_loop().time()
         if current_time - start_time > timeout:
@@ -48,76 +41,84 @@ async def wait_for_login_success(page, initial_url, platform_name="平台", time
             await asyncio.sleep(2)  # 轮询间隔
             current_url = page.url
             
-            # 快手特殊处理：无论URL是否变化，都检测页面元素
-            if platform_name == "快手":
-                try:
-                    print(f"[{platform_name}] 正在检测页面元素判断登录状态...")
-                    
-                    # 等待页面稳定
-                    await page.wait_for_load_state('networkidle', timeout=8000)
-                    
-                    # 首先检测未登录状态的元素（立即登录按钮）
-                    login_button_count = await page.locator('text="立即登录"').count()
-                    if login_button_count > 0:
-                        print(f"[{platform_name}] 检测到'立即登录'按钮，仍在未登录页面，继续等待...")
+            print(f"[{platform_name}] 正在进行智能登录状态检测...")
+            
+            # 等待页面稳定
+            await page.wait_for_load_state('networkidle', timeout=8000)
+            
+            # 方式1：URL变化检测（优先级高）
+            url_changed = current_url != initial_url
+            url_indicates_login = False
+            
+            if url_changed:
+                # 检查新URL是否不再包含登录关键词
+                is_login_page = any(keyword in current_url.lower() for keyword in login_keywords)
+                if not is_login_page:
+                    print(f"[{platform_name}] ✓ URL变化检测通过: {initial_url} -> {current_url}")
+                    url_indicates_login = True
+                else:
+                    print(f"[{platform_name}] URL变化但仍在登录相关页面")
+            
+            # 方式2：页面元素检测（通用检测）
+            element_indicates_login = False
+            
+            try:
+                # 检测未登录状态的通用元素
+                logout_indicators = [
+                    'text="立即登录"',
+                    'text="登录"', 
+                    'text="注册"',
+                    'text="Sign in"',
+                    'text="Login"',
+                    'text="登陆"'
+                ]
+                
+                logout_detected = False
+                for indicator in logout_indicators:
+                    try:
+                        count = await page.locator(indicator).count()
+                        if count > 0:
+                            print(f"[{platform_name}] × 检测到未登录元素: {indicator}")
+                            logout_detected = True
+                            break
+                    except Exception:
                         continue
-                    
-                    # 检测登录后的特征元素（左侧导航栏、发布作品按钮等）
+                
+                if not logout_detected:
+                    # 检测登录后的通用元素
                     login_indicators = [
-                        'text="首页"',           # 左侧导航的首页
-                        'text="内容管理"',       # 左侧导航的内容管理  
-                        'text="发布作品"',       # 顶部发布按钮
-                        'text="上传视频"',       # 上传视频按钮
-                        'text="继续编辑"',       # 继续编辑按钮（从截图看到的）
-                        '[role="navigation"]',  # 导航栏角色
+                        'text="首页"',
+                        'text="Home"',
                     ]
                     
-                    login_detected = False
                     for indicator in login_indicators:
                         try:
-                            element_count = await page.locator(indicator).count()
-                            if element_count > 0:
-                                print(f"[{platform_name}] 检测到登录元素: {indicator}")
-                                login_detected = True
+                            count = await page.locator(indicator).count()
+                            if count > 0:
+                                print(f"[{platform_name}] ✓ 检测到登录元素: {indicator}")
+                                element_indicates_login = True
                                 break
                         except Exception:
-                            continue  # 继续检测下一个元素
-                    
-                    if login_detected:
-                        print(f"[{platform_name}] 页面元素验证成功，已登录状态!")
-                        return True
-                    else:
-                        print(f"[{platform_name}] 未检测到登录状态元素，继续等待用户登录...")
-                        # 给出操作提示
-                        if (current_time - start_time) > 15 and (current_time - start_time) % 10 < 2:
-                            print(f"[{platform_name}] 提示：请在浏览器中点击'立即登录'按钮并完成登录")
-                        
-                except Exception as e:
-                    print(f"[{platform_name}] 页面元素检测异常: {e}")
-                    
+                            continue
+            
+            except Exception as e:
+                print(f"[{platform_name}] 页面元素检测异常: {e}")
+            
+            # 综合判断：URL变化 OR 元素检测成功
+            if url_indicates_login or element_indicates_login:
+                detection_method = []
+                if url_indicates_login:
+                    detection_method.append("URL变化")
+                if element_indicates_login:
+                    detection_method.append("页面元素")
+                
+                print(f"[{platform_name}] ✅ 通过 {'+'.join(detection_method)} 检测，登录成功!")
+                return True
             else:
-                # 其他平台的通用逻辑：检查URL变化
-                if current_url != initial_url:
-                    # 检查新URL是否不再包含登录关键词
-                    is_login_page = any(keyword in current_url.lower() for keyword in login_keywords)
-                    
-                    if not is_login_page:
-                        print(f"[{platform_name}] 检测到URL变化: {initial_url} -> {current_url}")
-                        
-                        # 等待页面稳定
-                        try:
-                            await page.wait_for_load_state('networkidle', timeout=10000)
-                            print(f"[{platform_name}] 页面加载稳定，登录检测成功!")
-                            return True
-                        except Exception as e:
-                            print(f"[{platform_name}] 页面稳定性检查异常，但继续检测: {e}")
-                            return True
-                    else:
-                        print(f"[{platform_name}] URL变化但仍在登录相关页面，继续等待...")
-                else:
-                    # 给出等待提示
-                    if (current_time - start_time) > 15 and (current_time - start_time) % 10 < 2:
-                        print(f"[{platform_name}] 提示：请在浏览器中完成登录操作")
+                print(f"[{platform_name}] ⏳ 未检测到登录状态，继续等待...")
+                # 给出操作提示
+                if (current_time - start_time) > 15 and (current_time - start_time) % 10 < 2:
+                    print(f"[{platform_name}] 💡 提示：请在浏览器中完成登录操作")
             
         except Exception as e:
             print(f"[{platform_name}] 登录检测过程中出现异常: {e}")
