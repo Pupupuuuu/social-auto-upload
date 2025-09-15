@@ -9,25 +9,7 @@ from conf import LOCAL_CHROME_PATH
 from utils.base_social_media import set_init_script
 from utils.files_times import get_absolute_path
 from utils.log import kuaishou_logger
-
-
-async def cookie_auth(account_file):
-    async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=True)
-        context = await browser.new_context(storage_state=account_file)
-        context = await set_init_script(context)
-        # 创建一个新的页面
-        page = await context.new_page()
-        # 访问指定的 URL
-        await page.goto("https://cp.kuaishou.com/article/publish/video")
-        try:
-            await page.wait_for_selector("div.names div.container div.name:text('机构服务')", timeout=5000)  # 等待5秒
-
-            kuaishou_logger.info("[+] 等待5秒 cookie 失效")
-            return False
-        except:
-            kuaishou_logger.success("[+] cookie 有效")
-            return True
+from myUtils.auth import cookie_auth_ks as cookie_auth
 
 
 async def ks_setup(account_file, handle=False):

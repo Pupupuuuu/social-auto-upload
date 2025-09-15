@@ -113,8 +113,10 @@ def upload_to_tencent(file, title, tags):
     # 获取 cookie 文件
     account_file = Path(BASE_DIR / "cookies" / "tencent_uploader" / "account.json")
 
-    # 获取 cookie , 如果cookie失效那么就弹窗重新登陆
+    # 验证cookie，如果失效则会弹出浏览器登录
+    print("[-] 正在验证视频号Cookie，如果失效将自动打开浏览器处理...")
     asyncio.run(weixin_setup(account_file, handle=True))
+    print("[+] Cookie验证或处理完成，继续上传流程。")
 
     category = TencentZoneTypes.LIFESTYLE.value  # 标记原创需要否则不需要传
 
@@ -161,8 +163,10 @@ def upload_to_douyin(file, title, tags, headless: bool = False, location: str | 
 def upload_to_kuaishou(file, title, tags, headless: bool = False):
     # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "ks_uploader" / "account.json")
-    # 验证cookie
-    cookie_setup = asyncio.run(ks_setup(account_file, handle=False))
+    # 验证cookie，如果失效则会弹出浏览器登录
+    print("[-] 正在验证快手Cookie，如果失效将自动打开浏览器处理...")
+    asyncio.run(ks_setup(account_file, handle=True))
+    print("[+] Cookie验证或处理完成，继续上传流程。")
 
     # 打印视频文件名、标题和 hashtag
     print(f"视频文件名：{file}")
@@ -192,12 +196,12 @@ if __name__ == '__main__':
     # upload_to_xhs(file=file, title=title, tags=tags)
 
     # # 调用 Tencent 上传
-    # print("\n=== Tencent ===")
-    # upload_to_tencent(file=file, title=title, tags=tags)
+    print("\n=== Tencent ===")
+    upload_to_tencent(file=file, title=title, tags=tags)
 
     # # 调用 Douyin 上传
-    print("\n=== Douyin ===")
-    upload_to_douyin(file=file, title=title, tags=tags)
+    # print("\n=== Douyin ===")
+    # upload_to_douyin(file=file, title=title, tags=tags)
 
     # # 调用 Kuaishou 上传
     # print("\n=== Kuaishou ===")
