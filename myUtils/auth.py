@@ -16,24 +16,33 @@ async def cookie_auth_douyin(account_file):
         browser = await playwright.chromium.launch(headless=True)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
         page = await context.new_page()
-        # 访问指定的 URL
-        await page.goto("https://creator.douyin.com/creator-micro/content/upload")
         try:
-            await page.wait_for_url("https://creator.douyin.com/creator-micro/content/upload", timeout=5000)
-        except:
-            print("[+] 等待5秒 cookie 失效")
+            await page.goto("https://creator.douyin.com/creator-micro/content/upload")
+            # 等待页面加载稳定，以便获取最终URL
+            await page.wait_for_load_state('networkidle', timeout=10000)
+
+            final_url = page.url
+            print(f"[-] 验证页面最终URL为: {final_url}")
+
+            # 验证一：检查URL是否为登录页
+            if "login" in final_url:
+                print("[+] URL中检测到'login'，判定为cookie失效")
+                return False
+
+            # 验证二：保留原有逻辑，检查页面是否包含登录相关的文本
+            if await page.get_by_text('手机号登录').count() or await page.get_by_text('扫码登录').count():
+                print("[+] 页面文本中检测到登录提示，判定为cookie失效")
+                return False
+
+            print("[+] URL及页面内容验证通过，cookie有效")
+            return True
+        except Exception as e:
+            print(f"[-] Cookie验证过程中发生异常: {e}")
+            return False
+        finally:
             await context.close()
             await browser.close()
-            return False
-        # 2024.06.17 抖音创作者中心改版
-        if await page.get_by_text('手机号登录').count() or await page.get_by_text('扫码登录').count():
-            print("[+] 等待5秒 cookie 失效")
-            return False
-        else:
-            print("[+] cookie 有效")
-            return True
 
 async def cookie_auth_tencent(account_file):
     async with async_playwright() as playwright:

@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from xhs import XhsClient
+from utils.log import douyin_logger
 
 # 导入工具函数和配置
 from conf import BASE_DIR
@@ -131,8 +132,10 @@ def upload_to_tencent(file, title, tags):
 def upload_to_douyin(file, title, tags, headless: bool = False, location: str | None = None):
     # 获取cookie
     account_file = Path(BASE_DIR / "cookies" / "douyin_uploader" / "account.json")
-    # 验证cookie
-    cookie_setup = asyncio.run(douyin_setup(account_file, handle=False))
+    # 验证cookie，如果失效则会弹出浏览器登录
+    print("[-] 正在验证抖音Cookie，如果失效将自动打开浏览器处理...")
+    asyncio.run(douyin_setup(account_file, handle=True))
+    print("[+] Cookie验证或处理完成，继续上传流程。")
 
     # 获取封面图
     thumbnail_path = file.with_suffix('.png')
@@ -189,16 +192,16 @@ if __name__ == '__main__':
     # upload_to_xhs(file=file, title=title, tags=tags)
 
     # # 调用 Tencent 上传
-    print("\n=== Tencent ===")
-    upload_to_tencent(file=file, title=title, tags=tags)
+    # print("\n=== Tencent ===")
+    # upload_to_tencent(file=file, title=title, tags=tags)
 
     # # 调用 Douyin 上传
     print("\n=== Douyin ===")
     upload_to_douyin(file=file, title=title, tags=tags)
 
     # # 调用 Kuaishou 上传
-    print("\n=== Kuaishou ===")
-    upload_to_kuaishou(file=file, title=title, tags=tags)
+    # print("\n=== Kuaishou ===")
+    # upload_to_kuaishou(file=file, title=title, tags=tags)
 
     # 所有上传完成
     print("\n=== 所有平台上传完成！ ===")
