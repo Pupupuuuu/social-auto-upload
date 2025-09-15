@@ -8,7 +8,7 @@ import asyncio
 from conf import LOCAL_CHROME_PATH
 from utils.base_social_media import set_init_script
 from utils.log import douyin_logger
-from myUtils.auth import cookie_auth_douyin as cookie_auth
+from myUtils.auth import cookie_auth_douyin as cookie_auth, wait_for_login_success
 
 
 async def douyin_setup(account_file, handle=False):
@@ -31,12 +31,22 @@ async def douyin_cookie_gen(account_file):
         # Setup context however you like.
         context = await browser.new_context()  # Pass any options
         context = await set_init_script(context)
-        # Pause the page, and start recording manually.
+        # 智能检测登录成功
         page = await context.new_page()
-        await page.goto("https://creator.douyin.com/")
-        await page.pause()
-        # 点击调试器的继续，保存cookie
-        await context.storage_state(path=account_file)
+        initial_url = "https://creator.douyin.com/"
+        await page.goto(initial_url)
+        
+        # 等待用户登录成功
+        login_success = await wait_for_login_success(page, initial_url, "抖音")
+        if login_success:
+            # 保存cookie
+            await context.storage_state(path=account_file)
+            douyin_logger.info("抖音登录成功，Cookie已保存")
+        else:
+            douyin_logger.error("抖音登录检测失败或超时")
+        
+        await context.close()
+        await browser.close()
 
 
 class DouYinVideo(object):

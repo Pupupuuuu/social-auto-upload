@@ -9,7 +9,7 @@ from conf import LOCAL_CHROME_PATH
 from utils.base_social_media import set_init_script
 from utils.files_times import get_absolute_path
 from utils.log import kuaishou_logger
-from myUtils.auth import cookie_auth_ks as cookie_auth
+from myUtils.auth import cookie_auth_ks as cookie_auth, wait_for_login_success
 
 
 async def ks_setup(account_file, handle=False):
@@ -35,12 +35,23 @@ async def get_ks_cookie(account_file):
         # Setup context however you like.
         context = await browser.new_context()  # Pass any options
         context = await set_init_script(context)
-        # Pause the page, and start recording manually.
+        # 智能检测登录成功
         page = await context.new_page()
-        await page.goto("https://cp.kuaishou.com")
-        await page.pause()
-        # 点击调试器的继续，保存cookie
-        await context.storage_state(path=account_file)
+        initial_url = "https://cp.kuaishou.com/article/publish/video"
+        kuaishou_logger.info(f"正在跳转到快手功能页面: {initial_url}")
+        await page.goto(initial_url)
+        
+        # 等待用户登录成功（通过页面元素检测）
+        login_success = await wait_for_login_success(page, initial_url, "快手")
+        if login_success:
+            # 保存cookie
+            await context.storage_state(path=account_file)
+            kuaishou_logger.info("快手登录成功，Cookie已保存")
+        else:
+            kuaishou_logger.error("快手登录检测失败或超时")
+        
+        await context.close()
+        await browser.close()
 
 
 class KSVideo(object):

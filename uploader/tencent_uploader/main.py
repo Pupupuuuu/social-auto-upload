@@ -9,7 +9,7 @@ from conf import LOCAL_CHROME_PATH
 from utils.base_social_media import set_init_script
 from utils.files_times import get_absolute_path
 from utils.log import tencent_logger
-from myUtils.auth import cookie_auth_tencent as cookie_auth
+from myUtils.auth import cookie_auth_tencent as cookie_auth, wait_for_login_success
 
 
 def format_str_for_short_title(origin_title: str) -> str:
@@ -45,13 +45,23 @@ async def get_tencent_cookie(account_file):
         browser = await playwright.chromium.launch(**options)
         # Setup context however you like.
         context = await browser.new_context()  # Pass any options
-        # Pause the page, and start recording manually.
+        # 智能检测登录成功
         context = await set_init_script(context)
         page = await context.new_page()
-        await page.goto("https://channels.weixin.qq.com")
-        await page.pause()
-        # 点击调试器的继续，保存cookie
-        await context.storage_state(path=account_file)
+        initial_url = "https://channels.weixin.qq.com"
+        await page.goto(initial_url)
+        
+        # 等待用户登录成功
+        login_success = await wait_for_login_success(page, initial_url, "视频号")
+        if login_success:
+            # 保存cookie
+            await context.storage_state(path=account_file)
+            tencent_logger.info("视频号登录成功，Cookie已保存")
+        else:
+            tencent_logger.error("视频号登录检测失败或超时")
+        
+        await context.close()
+        await browser.close()
 
 
 async def weixin_setup(account_file, handle=False):
